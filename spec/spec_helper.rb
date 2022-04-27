@@ -1,6 +1,9 @@
 # frozen_string_literal: true
+Bundler.require :default, :development
 
-require "fume/aloader"
+Combustion.initialize! :all
+
+# require "fume/aloader"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

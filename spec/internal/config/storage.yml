@@ -1,0 +1,3 @@
+test:
+  service: Disk
+  root: /Users/sunteya/Workspaces/sun/fume-aloader/tmp/storage
