@@ -1,8 +1,5 @@
 require_relative "aloader/version"
+require_relative "association_loader_relation"
+require_relative "association_loader"
 
-module Fume
-  module Aloader
-    class Error < StandardError; end
-    # Your code goes here...
-  end
-end
+require_relative "aloader/railtie"

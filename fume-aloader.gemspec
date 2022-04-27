@@ -31,6 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rails', '~> 6.1'
   spec.add_development_dependency 'combustion', '~> 1.3'
   spec.add_development_dependency 'sqlite3'
+  spec.add_development_dependency "rspec-do_action", "~> 0.0.7"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

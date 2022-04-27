@@ -1,12 +1,12 @@
 require 'rails_helper'
 
 RSpec.describe AssociationLoaderRelation do
-  include_context "workathon with student and teacher"
-  background(:answer_sheet) { create :answer_sheet, test_paper: test_paper, student: student, homework_paper: homework_paper, accuracy: 50, latest: false }
+  let!(:bus) { Bus.create! manufacturer_name: 'Toyota' }
+  let!(:passenger_1) { Passenger.create! bus: bus }
 
   describe "#al_load" do
     context "success" do
-      action { @result = AnswerSheet.all.al_load(:answer_inputs) }
+      action { @result = Bus.all.al_load(:passengers) }
 
       it { expect(@result).not_to be_empty }
     end
@@ -14,18 +14,18 @@ RSpec.describe AssociationLoaderRelation do
 
   describe "#al_to_scope" do
     context "using default" do
-      let(:answer_sheets) { AnswerSheet.limit(10) }
-      action { @result = answer_sheets.al_to_scope }
+      let(:buses) { Bus.limit(10) }
+      action { @result = buses.al_to_scope }
 
       it { expect(@result).not_to be_empty }
     end
 
     context "with params" do
-      let(:answer_sheets) { AnswerSheet.limit(10) }
+      let(:buses) { Bus.limit(10) }
       before {
-        allow_any_instance_of(AssociationLoader).to receive(:presets).and_return({ check: [ :schoolbook ] })
+        allow_any_instance_of(AssociationLoader).to receive(:presets).and_return({ check: [ :passengers ] })
       }
-      action { @result = answer_sheets.al_to_scope(:check) }
+      action { @result = buses.al_to_scope(:check) }
 
       it { expect(@result).not_to be_empty }
     end

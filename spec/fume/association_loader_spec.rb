@@ -1,24 +1,29 @@
 require 'rails_helper'
 
 RSpec.describe AssociationLoader, type: :model do
-  include_context "workathon with student and teacher"
-  background(:answer_sheet) { create :answer_sheet, test_paper: test_paper, student: student, homework_paper: homework_paper, accuracy: 50, latest: false }
-  background(:answer_input) { create :answer_input, paper: answer_sheet }
-  let(:association) { AnswerSheet.new.association(:answer_inputs) }
+
+  let!(:bus) { Bus.create! manufacturer_name: 'Toyota' }
+  let!(:bus_license) { License.create! number: '123456789', vehicle: bus }
+  let!(:passenger_1) { Passenger.create! bus: bus, gender: Gender.male }
+
+  let!(:truck) { Truck.create! manufacturer_name: 'Ford' }
+  let!(:truck_license) { License.create! number: '987654321', vehicle: truck }
 
   describe '#build_association_values_scope' do
+    let(:association) { Bus.new.association(:passengers) }
+
     context 'when records is an instance of ActiveRecord::Relation' do
-      let(:records) { AnswerSheet.all }
+      let(:records) { Bus.all }
       let(:loader) { AssociationLoader.new(records) }
-      action { @result = loader.build_association_values_scope(:answer_inputs, association) }
+      action { @result = loader.build_association_values_scope(:passengers, association) }
 
       it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
     end
 
     context 'when record is an instance of array' do
-      let(:records) { AnswerSheet.limit(2).to_a }
-      let(:loader) { AssociationLoader.new(records, AnswerSheet) }
-      action { @result = loader.build_association_values_scope(:answer_inputs, association) }
+      let(:records) { Bus.limit(2).to_a }
+      let(:loader) { AssociationLoader.new(records, Bus) }
+      action { @result = loader.build_association_values_scope(:passengers, association) }
 
 
       it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
@@ -26,22 +31,22 @@ RSpec.describe AssociationLoader, type: :model do
   end
 
   describe "#apply_association_scopes" do
-    let(:records) { AnswerSheet.all }
+    let(:records) { Bus.all }
     let(:loader) {
       AssociationLoader.new(records) do |scopes|
-        self.scopes[:answer_inputs] = -> { with_include(:question_input) }
+        self.scopes[:passengers] = -> { includes(:gender).references(:gender) }
       end
     }
-    action { @result = loader.apply_association_scopes(records, :answer_inputs) }
+    action { @result = loader.apply_association_scopes(records, :passengers) }
 
     it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
   end
 
   describe "#apply_association_includes" do
-    let(:records) { AnswerSheet.all }
+    let(:records) { Bus.all }
     let(:loader) {
       AssociationLoader.new(records) do |scopes|
-        self.includes[:answer_inputs] = { question_input: :question }
+        self.includes[:passengers] = { question_input: :question }
       end
     }
 
@@ -69,13 +74,13 @@ RSpec.describe AssociationLoader, type: :model do
   end
 
   describe "#build_preset_include_names" do
-    let(:records) { AnswerSheet.all }
+    let(:records) { Bus.all }
 
     context "includes preset key" do
       let(:loader) {
         AssociationLoader.new(records) do |scopes|
-          self.includes[:answer_inputs] = { question_input: :question }
-          self.presets[:default] = [ :answer_inputs ]
+          self.includes[:passengers] = [ :gender ]
+          self.presets[:default] = [ :passengers ]
         end
       }
       action { @result = loader.build_preset_include_names(:default) }
@@ -97,11 +102,11 @@ RSpec.describe AssociationLoader, type: :model do
   end
 
   describe "#preload_all" do
-    let(:records) { AnswerSheet.all }
-    let(:loader) { AssociationLoader.new(records, AnswerSheet) }
+    let(:records) { Bus.all }
+    let(:loader) { AssociationLoader.new(records, Bus) }
 
-    action { @result = loader.preload_all(:answer_inputs) }
+    action { @result = loader.preload_all(:passengers) }
 
-    it { expect(loader.cached_values[:answer_inputs].count).not_to eq 0 }
+    it { expect(loader.cached_values[:passengers].count).not_to eq 0 }
   end
 end
