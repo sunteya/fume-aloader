@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe AssociationLoaderRelation do
+RSpec.describe "AssociationLoaderRelation" do
   let!(:bus) { Bus.create! manufacturer_name: 'Toyota' }
   let!(:passenger_1) { Passenger.create! bus: bus }
 
@@ -23,7 +23,7 @@ RSpec.describe AssociationLoaderRelation do
     context "with params" do
       let(:buses) { Bus.limit(10) }
       before {
-        allow_any_instance_of(AssociationLoader).to receive(:presets).and_return({ check: [ :passengers ] })
+        allow_any_instance_of(Fume::Aloader::AssociationLoader).to receive(:presets).and_return({ check: [ :passengers ] })
       }
       action { @result = buses.al_to_scope(:check) }
 

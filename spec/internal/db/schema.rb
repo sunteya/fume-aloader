@@ -9,9 +9,19 @@ ActiveRecord::Schema.define do
     t.string :code
   end
 
+  create_table :countries do |t|
+    t.string :name
+  end
+
+  create_table :cities do |t|
+    t.string :name
+    t.integer :country_id
+  end
+
   create_table :passengers do |t|
     t.integer :bus_id
     t.integer :gender_id
+    t.integer :homeplace_id
   end
 
   create_table :trucks do |t|
