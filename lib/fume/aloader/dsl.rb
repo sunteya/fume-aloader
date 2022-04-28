@@ -18,25 +18,22 @@ module Fume::Aloader
       self.config[:scope_includes] = columns
     end
 
-    def association(name, options = {}, &block)
-      self.config[:associations] ||= {}
-      self.config[:associations][name] = options
+    def attribute(name, options = {}, &block)
+      self.config[:attributes] ||= {}
+      self.config[:attributes][name] = options
 
       if block
         dsl = self.class.new(&block)
-        self.config[:associations][name] = self.config[:associations][name].merge(dsl.config)
+        self.config[:attributes][name] = self.config[:attributes][name].merge(dsl.config)
       end
     end
 
     def apply_config(loader)
-      loader.includes = (self.config[:associations] || {}).transform_values do |options|
-        options[:scope_includes]
-      end.compact
-
-      loader.presets_v1 = (self.config[:presets] || {}).transform_values do |options|
-        options[:scope_includes]
-      end
-
+      loader.presets = self.config[:presets] || {}
+      loader.presets[nil] = {
+        scope_includes: self.config[:scope_includes] || [],
+        attributes: self.config[:attributes] || {}
+      }
       loader
     end
   end

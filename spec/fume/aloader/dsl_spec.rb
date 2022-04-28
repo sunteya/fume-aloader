@@ -9,7 +9,7 @@ RSpec.describe Fume::Aloader::DSL, type: :model do
 
         preset :info do
           scope_includes [ :license ]
-          association :passengers do
+          attribute :passengers do
             scope_includes city: :country
           end
         end
@@ -22,7 +22,7 @@ RSpec.describe Fume::Aloader::DSL, type: :model do
       },
       info: {
         scope_includes: [ :license ],
-        associations: {
+        attributes: {
           passengers: { scope_includes: { city: :country } }
         }
       }

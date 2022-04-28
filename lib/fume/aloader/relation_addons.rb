@@ -51,13 +51,8 @@ module Fume::Aloader
 
     def al_to_scope(preset = :default)
       al_init_loader
-      names = self.aloader.build_preset_include_names(preset) || []
-
-      if names.present?
-        includes(*names).references(*names)
-      else
-        self
-      end
+      self.aloader.active(preset)
+      self.aloader.apply_scope_includes(self)
     end
   end
 end

@@ -13,9 +13,14 @@ ActiveRecord::Schema.define do
     t.string :name
   end
 
+  create_table :provinces do |t|
+    t.string :name
+  end
+
   create_table :cities do |t|
     t.string :name
     t.integer :country_id
+    t.integer :province_id
   end
 
   create_table :passengers do |t|

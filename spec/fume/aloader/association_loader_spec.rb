@@ -29,23 +29,15 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     end
   end
 
-  describe "#apply_association_scopes" do
-    let(:records) { Bus.all }
-    let(:loader) {
-      Fume::Aloader::AssociationLoader.new(records) do |scopes|
-        self.scopes[:passengers] = -> { includes(:gender).references(:gender) }
-      end
-    }
-    action { @result = loader.apply_association_scopes(records, :passengers) }
-
-    it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
-  end
-
   describe "#apply_association_includes" do
     let(:records) { Bus.all }
     let(:loader) {
-      Fume::Aloader::AssociationLoader.new(records) do |scopes|
-        self.includes[:passengers] = { question_input: :question }
+      Fume::Aloader.dsl(records) do
+        preset :default do
+          attribute :passengers do
+            scope_includes homeplace: [ :country ]
+          end
+        end
       end
     }
 
@@ -58,45 +50,77 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     end
 
     context "excludes includes source" do
-      before { loader.includes[:answer_inputs] =  [ :question_input ] }
-      before { loader.predata_all(:answer_inputs, :question_input, []) }
+      before { loader.predata_all(:homeplace, :country, []) }
 
       it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
     end
 
     context "excludes not includes source" do
-      before { loader.includes[:answer_inputs] =  [ :question_input ] }
-      before { loader.predata_all(:answer_inputs, :attachments, []) }
+      before { loader.predata_all(:homeplace, :province, []) }
 
       it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
     end
   end
 
-  describe "#build_preset_include_names" do
-    let(:records) { Bus.all }
+  describe "#build_profile_attribute_includes" do
+    let(:loader) { Fume::Aloader.dsl(Bus.all) do
+      preset :info do
+        attribute :homeplace, scope_includes: [ :country ]
+      end
+    end }
 
-    context "includes preset key" do
-      let(:loader) {
-        Fume::Aloader::AssociationLoader.new(records) do |scopes|
-          self.includes[:passengers] = [ :gender ]
-          self.presets_v1[:default] = [ :passengers ]
-        end
-      }
-      action { @result = loader.build_preset_include_names(:default) }
+    before { loader.active(:info) }
+    action { @result = loader.build_profile_attribute_includes(:homeplace) }
 
-      it { expect(@result.first.is_a?(Hash)).to be_truthy }
+    context "when defined" do
+      it { expect(@result).to eq [ :country ] }
     end
 
-    context "not includes preset key" do
-      let(:loader) {
-        Fume::Aloader::AssociationLoader.new(records) do |scopes|
-          self.includes[:answer_inputs] = { question_input: :question }
-          self.presets_v1[:default] = [ :schoolbook ]
-        end
-      }
-      action { @result = loader.build_preset_include_names(:default) }
+    context "when preload" do
+      before { loader.predata_all(:homeplace, :country, []) }
+      it { expect(@result).to eq [] }
+    end
+  end
 
-      it { expect(@result.first).to eq "schoolbook".to_sym }
+  describe "#build_profile_scope_includes" do
+    let(:loader) { Fume::Aloader.dsl(Bus.all) do
+      preset :head do
+        scope_includes [ :gender ]
+      end
+
+      preset :info do
+        attribute :homeplace, scope_includes: [ :country ]
+        scope_includes [ :gender, :homeplace ]
+      end
+    end }
+
+    action { @result = loader.build_profile_scope_includes }
+
+    context "when preset is undefined" do
+      before { loader.active :undefined }
+      it { expect(@result).to eq [ ] }
+    end
+
+    context "when preset found" do
+      before { loader.active :head }
+      it { expect(@result).to eq [ :gender ] }
+    end
+
+    context "when association expand" do
+      before { loader.active :info }
+      it { expect(@result).to eq [ :gender, homeplace: [ :country ] ] }
+    end
+
+    context "when association is cached" do
+      before { loader.cached_values[:homeplace] = City.all.index_by(&:id) }
+      before { loader.active :info }
+      it { expect(@result).to eq [ :gender ] }
+    end
+
+    context "when nested association is preload" do
+      before { loader.predata_all([ :homeplace, :country ], Country.all) }
+      before { loader.active :info }
+      it { expect(@result).to eq [ :gender, :homeplace ] }
     end
   end
 
@@ -105,42 +129,6 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     let(:loader) { Fume::Aloader::AssociationLoader.new(records, Bus) }
 
     action { @result = loader.preload_all(:passengers) }
-
     it { expect(loader.cached_values[:passengers].count).not_to eq 0 }
   end
-
-  # aloader_init do
-  #     # scope_includes [ :license ]
-  #     # association :passengers, preset: :head
-
-  #   preset do
-  #     self.columns[:passengers] = Passenger::ALOADER_INFO_INCLUDES
-  #   end
-
-  #   preset :head do
-  #     scope_includes []
-
-  #     association :passengers do
-  #       scope_includes [ :gender ]
-  #     end
-  #   end
-
-  #   preset :info do
-  #     scope_includes [ :license ]
-  #     association :passengers, preset: :head
-  #   end
-  # end
-
-  # Passenger.al_build(self.passengers).al_to_scope(:head)
-
-  # @buses = buses_scope.al_to_scope(preset: :info) # includes(:ooxx).references(:ooxx)
-  # @buses.al_data(:license, [ license_1 ])
-  # @buses.al_load(preset: :head)
-
-  # @buses.al_load(:passengers) # SQL WITHOUT INNER JOIN genders
-
-  # @buses.al_data([ :passengers, :gender ], Gender.all)
-  # @buses.al_load(:passengers) # SQL WITHOUT INNER JOIN genders
-
-
 end

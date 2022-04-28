@@ -1,18 +1,16 @@
 module Fume::Aloader
   class AssociationLoader
-    attr_accessor :scopes
-    attr_accessor :includes
-    attr_accessor :presets_v1
     attr_accessor :klass
+    attr_accessor :records
+    attr_accessor :presets
+    attr_accessor :profile
 
     attr_accessor :cached_values
     attr_accessor :predata_values
-    attr_accessor :records
 
     def initialize(records, klass = nil, &block)
-      self.scopes = {}
-      self.includes = {}
-      self.presets_v1 = {}
+      self.profile = :default
+      self.presets = {}
       self.klass = klass || records.klass
 
       self.cached_values = {}
@@ -109,55 +107,110 @@ module Fume::Aloader
 
       association_scope = ActiveRecord::Associations::AssociationScope.new(value_transformation)
       values_scope = association.send(:target_scope).merge(association_scope.scope(association))
-      values_scope = apply_association_scopes(values_scope, name)
       values_scope = apply_association_includes(values_scope, name)
       values_scope = values_scope.limit(nil).offset(0)
       values_scope
     end
 
-    def apply_association_scopes(scope, name)
-      return scope unless self.scopes[name]
+    def apply_association_includes(base, name)
+      result = base
 
-      scope.instance_exec(&self.scopes[name]) || scope
+      columns = build_profile_attribute_includes(name)
+      result = result.includes(columns).references(columns) if columns.any?
+
+      result
     end
 
-    def apply_association_includes(scope, name)
-      include_names = self.includes[name]
-      return scope unless include_names
+    def build_profile_attribute_includes(name)
+      preset = self.presets[profile] || {}
+      includes = find_attribute_includes(preset, name) || []
+      return [] if includes.empty?
 
-      if self.predata_values.key?(name)
-        exclude_names = self.predata_values[name].map { |(path, _value)| path.length == 1 ? path.first : nil }
-        include_names = build_association_include_names(include_names, exclude_names)
-      end
-      scope.includes(include_names).references(include_names)
+      except = (self.predata_values[name] || []).map(&:first)
+      result = convert_to_includes_hash(includes, [], except)
+      simplify_includes_hash(result)
     end
 
-    def build_association_include_names(sources, excludes)
-      sources = [ sources ].flatten
-      excludes = [ excludes ].flatten.compact
-
-      sources.map do |source|
-        if source.is_a?(Hash)
-          source.reject { |k, v| excludes.include?(k) }
-        elsif excludes.include?(source)
-          nil
-        else
-          source
-        end
-      end.compact
-    end
-
-    def build_preset_include_names(key)
-      names = self.presets_v1[key] || []
-      names -= self.cached_values.keys
-
-      names.map do |name|
-        if self.includes.key?(name)
-          { name => self.includes[name] }
-        else
-          name
+    def build_profile_scope_includes
+      preset = self.presets[profile] || {}
+      except = self.cached_values.keys.map { |it| [ it] }.to_set
+      self.predata_values.each do |name, items|
+        items.each do |item|
+          except << ([ name ] + item.first)
         end
       end
+
+      result = {}
+      roots = [ preset[:scope_includes] || [] ].flatten
+      roots.each do |root|
+        if root.is_a?(Hash)
+          root.each do |(name, value)|
+            result.update convert_to_includes_hash({ name => value }, [], except)
+          end
+        else
+          includes = find_attribute_includes(preset, root) || {}
+          result.update convert_to_includes_hash({ root => includes }, [], except)
+        end
+      end
+
+      simplify_includes_hash(result)
+    end
+
+    def simplify_includes_hash(includes)
+      array = []
+      hash = {}
+
+      includes.each do |(key, value)|
+        if value.empty?
+          array << key
+        else
+          hash[key] = simplify_includes_hash(value)
+        end
+      end
+
+      hash.empty? ? array : array + [ hash ]
+    end
+
+    def convert_to_includes_hash(item, prefix = [], except = [])
+      case item
+      when Hash
+        item.each_with_object({}) do |(name, value), result|
+          path = prefix + [ name ]
+          if !except.include?(path)
+            result[name] = convert_to_includes_hash(value, path, except)
+          end
+        end
+      when Array
+        item.each_with_object({}) do |name, result|
+          path = prefix + [ name ]
+
+          if !except.include?(path)
+            result[name] = convert_to_includes_hash({}, path, except)
+          end
+        end
+      else
+        path = prefix + [ item ]
+        except.include?(path) ? {} : { item => Hash.new }
+      end
+    end
+
+    def apply_scope_includes(base)
+      names = build_profile_scope_includes
+
+      if names.any?
+        base.includes(*names).references(*names)
+      else
+        base
+      end
+    end
+
+    def find_attribute_includes(preset, name)
+      attribute = preset.dig(:attributes, name) || {}
+      attribute[:scope_includes]
+    end
+
+    def active(name)
+      self.profile = name
     end
   end
 end
