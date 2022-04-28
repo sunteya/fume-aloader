@@ -29,70 +29,60 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     end
   end
 
-  describe "#apply_association_includes" do
-    let(:records) { Bus.all }
-    let(:loader) {
-      Fume::Aloader.dsl(records) do
-        preset :default do
-          attribute :passengers do
-            scope_includes homeplace: [ :country ]
-          end
+  describe "#apply_profile_attribute_includes" do
+    before { allow(Passenger).to receive(:al_build).and_wrap_original { |m, *args|
+      Fume::Aloader.dsl(*args, Passenger) do
+        preset :head do
+          scope_includes homeplace: [ :country ]
         end
       end
-    }
+    } }
 
-    action { @result = loader.apply_association_includes(records, :answer_inputs) }
-
-    context "source is a hash" do
-      before { loader.predata_all(:answer_inputs, :question_input, []) }
-
-      it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
-    end
-
-    context "excludes includes source" do
-      before { loader.predata_all(:homeplace, :country, []) }
-
-      it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
-    end
-
-    context "excludes not includes source" do
-      before { loader.predata_all(:homeplace, :province, []) }
-
-      it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
-    end
-  end
-
-  describe "#build_profile_attribute_includes" do
     let(:loader) { Fume::Aloader.dsl(Bus.all) do
+      preset :head do
+        attribute :passengers, preset: :head
+      end
+
       preset :info do
-        attribute :homeplace, scope_includes: [ :country ]
+        attribute :passengers do
+          scope_includes homeplace: [ :country, :province ]
+        end
       end
     end }
 
-    before { loader.active(:info) }
-    action { @result = loader.build_profile_attribute_includes(:homeplace) }
+    action { @result = loader.apply_profile_attribute_includes(Passenger.where("id = -1"), :passengers) }
 
-    context "when defined" do
-      it { expect(@result).to eq [ :country ] }
+    context 'when attribute with scope_includes' do
+      before { loader.active(:info) }
+      it { expect(@result.to_sql).to be_include('JOIN "countries"') }
+
+      context "when association is preload" do
+        before { loader.predata_all(:passengers, :homeplace, :country, Country.all.index_by(&:id)) }
+        it { expect(@result.to_sql).to_not be_include('JOIN "countries"') }
+      end
     end
 
-    context "when preload" do
-      before { loader.predata_all(:homeplace, :country, []) }
-      it { expect(@result).to eq [] }
+    context 'when attribute is preset' do
+      before { loader.active(:head) }
+      it { expect(@result.to_sql).to be_include('JOIN "countries"')
+           expect(@result.aloader.profile).to eq :head }
     end
   end
 
   describe "#build_profile_scope_includes" do
-    let(:loader) { Fume::Aloader.dsl(Bus.all) do
-      preset :head do
-        scope_includes [ :gender ]
+    let(:loader) {
+      Fume::Aloader::AssociationLoader.new([], Passenger) do
+        self.presets = {
+          head: { scope_includes: [ :gender ] },
+          info: {
+            scope_includes: [ :gender, :homeplace ],
+            attributes: {
+              homeplace: { scope_includes: [ :country ] }
+            }
+          }
+        }
       end
-
-      preset :info do
-        attribute :homeplace, scope_includes: [ :country ]
-        scope_includes [ :gender, :homeplace ]
-      end
-    end }
+    }
 
     action { @result = loader.build_profile_scope_includes }
 
@@ -117,10 +107,24 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
       it { expect(@result).to eq [ :gender ] }
     end
 
-    context "when nested association is preload" do
+    context "when association is preload" do
       before { loader.predata_all([ :homeplace, :country ], Country.all) }
       before { loader.active :info }
       it { expect(@result).to eq [ :gender, :homeplace ] }
+    end
+
+    context "when association is preset" do
+      before { loader.active :info }
+      before { allow(City).to receive(:al_build).and_wrap_original { |m, *args|
+        Fume::Aloader.dsl(*args, City) do
+          preset :head do
+            scope_includes [ :province ]
+          end
+        end
+      } }
+
+      before { loader.presets[:info][:attributes][:homeplace] = { preset: :head } }
+      it { expect(@result).to eq [ :gender, homeplace: [ :province ] ] }
     end
   end
 

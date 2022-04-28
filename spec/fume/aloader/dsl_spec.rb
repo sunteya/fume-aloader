@@ -5,6 +5,7 @@ RSpec.describe Fume::Aloader::DSL, type: :model do
     action {
       @result = Fume::Aloader::DSL.new do
         preset :head do
+          attribute :passengers, preset: :head
         end
 
         preset :info do
@@ -19,6 +20,11 @@ RSpec.describe Fume::Aloader::DSL, type: :model do
     it { expect(@result).to eq ({ presets: {
       head: {
         scope_includes: [],
+        attributes: {
+          passengers: {
+            preset: :head
+          }
+        }
       },
       info: {
         scope_includes: [ :license ],

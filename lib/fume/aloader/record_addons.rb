@@ -13,7 +13,7 @@ module Fume::Aloader
       def aloader_init(&block)
         define_singleton_method :al_build do |records|
           dsl = DSL.new(&block)
-          dsl.apply_config(AssociationLoader.new(records))
+          dsl.apply_config(AssociationLoader.new(records, self))
         end
       end
     end

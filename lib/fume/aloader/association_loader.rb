@@ -107,28 +107,31 @@ module Fume::Aloader
 
       association_scope = ActiveRecord::Associations::AssociationScope.new(value_transformation)
       values_scope = association.send(:target_scope).merge(association_scope.scope(association))
-      values_scope = apply_association_includes(values_scope, name)
+      values_scope = apply_profile_attribute_includes(values_scope, name)
       values_scope = values_scope.limit(nil).offset(0)
       values_scope
     end
 
-    def apply_association_includes(base, name)
-      result = base
-
-      columns = build_profile_attribute_includes(name)
-      result = result.includes(columns).references(columns) if columns.any?
-
-      result
-    end
-
-    def build_profile_attribute_includes(name)
+    def apply_profile_attribute_includes(base, name)
       preset = self.presets[profile] || {}
+      attribute = preset.dig(:attributes, name) || {}
+
+      if (attr_preset_name = attribute[:preset])
+        return base.al_to_scope(attr_preset_name)
+      end
+
       includes = find_attribute_includes(preset, name) || []
-      return [] if includes.empty?
+      return base if includes.empty?
+
 
       except = (self.predata_values[name] || []).map(&:first)
-      result = convert_to_includes_hash(includes, [], except)
-      simplify_includes_hash(result)
+      columns = simplify_includes_hash(convert_to_includes_hash(includes, [], except))
+
+      if columns.any?
+        base = base.includes(columns).references(columns)
+      else
+        base
+      end
     end
 
     def build_profile_scope_includes
@@ -194,7 +197,7 @@ module Fume::Aloader
       end
     end
 
-    def apply_scope_includes(base)
+    def apply_profile_scope_includes(base)
       names = build_profile_scope_includes
 
       if names.any?
@@ -206,7 +209,20 @@ module Fume::Aloader
 
     def find_attribute_includes(preset, name)
       attribute = preset.dig(:attributes, name) || {}
-      attribute[:scope_includes]
+
+      attr_preset_name = attribute[:preset]
+      return attribute[:scope_includes] || [] if attr_preset_name.nil?
+
+      loader = build_attribute_aloader(name, attr_preset_name)
+      loader.build_profile_scope_includes
+    end
+
+    def build_attribute_aloader(name, profile)
+      association = klass.new.association(name)
+      reflection = association.reflection
+      loader = reflection.klass.al_build([])
+      loader.active(profile)
+      loader
     end
 
     def active(name)

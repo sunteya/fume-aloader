@@ -19,15 +19,5 @@ RSpec.describe "AssociationLoaderRelation" do
 
       it { expect(@result).not_to be_empty }
     end
-
-    # context "with params" do
-    #   let(:buses) { Bus.limit(10) }
-    #   before {
-    #     allow_any_instance_of(Fume::Aloader::AssociationLoader).to receive(:presets).and_return({ check: [ :passengers ] })
-    #   }
-    #   action { @result = buses.al_to_scope(:check) }
-
-    #   it { expect(@result).not_to be_empty }
-    # end
   end
 end

@@ -24,7 +24,7 @@ module Fume::Aloader
 
       if block
         dsl = self.class.new(&block)
-        self.config[:attributes][name] = self.config[:attributes][name].merge(dsl.config)
+        self.config[:attributes][name][:scope_includes] = dsl.config[:scope_includes]
       end
     end
 

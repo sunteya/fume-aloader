@@ -35,7 +35,10 @@ module Fume::Aloader
       return unless klass.respond_to?(:al_build)
 
       self.aloader = klass.al_build(self)
-      self.aloader.predata_values = parent.predata_values.dup if parent
+      if parent
+        self.aloader.profile = parent.profile
+        self.aloader.predata_values = parent.predata_values.dup
+      end
     end
 
     def al_load(*args)
@@ -52,7 +55,7 @@ module Fume::Aloader
     def al_to_scope(preset = :default)
       al_init_loader
       self.aloader.active(preset)
-      self.aloader.apply_scope_includes(self)
+      self.aloader.apply_profile_scope_includes(self)
     end
   end
 end
