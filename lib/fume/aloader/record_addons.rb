@@ -9,8 +9,15 @@ module Fume::Aloader
       attr_accessor :aloader
     end
 
-    def al_load(*args)
-      self.aloader.load(self, *args)
+    def al_load(*path)
+      path = [ path ].flatten
+      name = path.shift
+      self.aloader.load(self, name)
+
+      if path.any?
+        value = self.send(name)
+        value&.al_load(*path)
+      end
     end
 
     module ClassMethods

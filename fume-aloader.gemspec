@@ -29,6 +29,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'combustion', '~> 1.3'
   spec.add_development_dependency 'sqlite3', ">= 1.4.2"
   spec.add_development_dependency "rspec-do_action", "~> 0.0.7"
+  spec.add_development_dependency "rspec", "~> 3.0"
+  spec.add_development_dependency 'simplecov', "~> 0.21.2"
+  spec.add_development_dependency 'factory_bot', "~> 6.2.1"
+  spec.add_development_dependency 'faker', '~> 2.20.0'
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

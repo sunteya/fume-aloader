@@ -24,6 +24,7 @@ ActiveRecord::Schema.define do
   end
 
   create_table :passengers do |t|
+    t.string :name
     t.integer :bus_id
     t.integer :gender_id
     t.integer :homeplace_id
