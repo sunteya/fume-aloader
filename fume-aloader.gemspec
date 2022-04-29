@@ -8,8 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ["sunteya"]
   spec.email = ["sunteya@gmail.com"]
 
-  spec.summary = "Write a short summary, because RubyGems requires one."
-  spec.description = "Write a longer description or delete this line."
+  spec.summary = "a configurable eager loading plugin for rails"
   spec.homepage = "https://github.com/sunteya/fume-aloader"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 2.6.0"

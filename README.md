@@ -1,8 +1,6 @@
 # Fume::Aloader
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/fume/aloader`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+[fume-aloader](https://github.com/sunteya/fume-aloader) is a configurable eager loading plugin for rails
 
 ## Installation
 
@@ -16,7 +14,7 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 ## Usage
 
-TODO: Write usage instructions here
+TODO: Please read spec code.
 
 ## Development
 
