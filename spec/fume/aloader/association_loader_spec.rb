@@ -10,12 +10,10 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
   let!(:truck_license) { License.create! number: '987654321', vehicle: truck }
 
   describe '#build_association_values_scope' do
-    let(:association) { Bus.new.association(:passengers) }
-
     context 'when records is an instance of ActiveRecord::Relation' do
       let(:records) { Bus.all }
       let(:loader) { Fume::Aloader::AssociationLoader.new(records) }
-      action { @result = loader.build_association_values_scope(:passengers, association) }
+      action { @result = loader.build_association_values_scope(:passengers) }
 
       it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
     end
@@ -23,7 +21,7 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     context 'when record is an instance of array' do
       let(:records) { Bus.limit(2).to_a }
       let(:loader) { Fume::Aloader::AssociationLoader.new(records, Bus) }
-      action { @result = loader.build_association_values_scope(:passengers, association) }
+      action { @result = loader.build_association_values_scope(:passengers) }
 
       it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
     end

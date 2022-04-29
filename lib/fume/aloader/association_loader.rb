@@ -1,3 +1,5 @@
+require_relative "relationship"
+
 module Fume::Aloader
   class AssociationLoader
     attr_accessor :klass
@@ -20,29 +22,21 @@ module Fume::Aloader
     end
 
     def find_cached_value(record, name)
-      association = record.association(name)
-      reflection = association.reflection
-
-      key = reflection.collection? ? record.send(:id) : record.send(reflection.join_foreign_key)
-
-      unless self.cached_values.key?(name)
-        init_records_value(name)
-      end
-
+      relationship = Relationship.build(klass, name)
+      key = relationship.get_cache_key(record)
       self.cached_values[name][key]
     end
 
     def load(record, name)
       association = record.association(name)
-      if association.loaded? && !self.cached_values.key?(name)
-        init_records_value(name, ->(scope) {
-          values = self.records.flat_map(&name.to_sym).compact
-          scope.send(:load_records, values)
-          scope.al_init_records
-        })
+      if self.cached_values.key?(name)
+        # prefer use cached value
+        association.target = find_cached_value(record, name)
+      elsif association.loaded?
+        # ignore
       else
-        value = find_cached_value(record, name)
-        association.target = value
+        init_records_value(name)
+        association.target = find_cached_value(record, name)
       end
     end
 
@@ -51,17 +45,15 @@ module Fume::Aloader
       name = path.shift
 
       if path.size.zero?
-        fill_records_value(name, values)
+        cache_association_values(name, values)
       else
         self.preload_values[name] ||= []
         self.preload_values[name] << [ path, values ]
       end
     end
 
-    def init_records_value(name, callback = nil)
-      association = klass.new.association(name)
-      values = build_association_values_scope(name, association)
-      callback&.(values)
+    def init_records_value(name)
+      values = build_association_values_scope(name)
 
       if self.preload_values.key?(name)
         preload_values[name].each do |args|
@@ -69,40 +61,18 @@ module Fume::Aloader
         end
       end
 
-      fill_records_value(name, values)
+      cache_association_values(name, values)
     end
 
-    def fill_records_value(name, values)
-      association = klass.new.association(name)
-      reflection = association.reflection
-
-      if reflection.collection?
-        self.cached_values[name] = values.each_with_object(Hash.new { [] }) do |it, result|
-          key = it.send(reflection.join_primary_key)
-          result[key] += [ it ]
-        end
-      elsif reflection.belongs_to?
-        self.cached_values[name] = values.index_by(&:id)
-      else
-        self.cached_values[name] = values.index_by { |it| it.send(reflection.join_primary_key) }
-      end
+    def cache_association_values(name, values)
+      relationship = Relationship.build(klass, name)
+      self.cached_values[name] = relationship.build_cached_value(values)
     end
 
-    def build_association_values_scope(name, association)
-      reflection = association.reflection
-
-      # HACK: 重写第一次取值，升级后可能会报错
-      # 不能使用子查询 select, 可能内存占用过多
-      hack_values = [ records.map { |item| item.read_attribute(reflection.join_foreign_key) }.uniq ]
-
-      value_transformation = ->(val) {
-        hack_values.shift || val
-      }
-
-      association_scope = ActiveRecord::Associations::AssociationScope.new(value_transformation)
-      values_scope = association.send(:target_scope).merge(association_scope.scope(association))
+    def build_association_values_scope(name)
+      relationship = Relationship.build(klass, name)
+      values_scope = relationship.build_values_scope(records)
       values_scope = apply_profile_attribute_includes(values_scope, name)
-      values_scope = values_scope.limit(nil).offset(0)
       values_scope
     end
 
@@ -116,7 +86,6 @@ module Fume::Aloader
 
       includes = find_attribute_includes(preset, name) || []
       return base if includes.empty?
-
 
       except = (self.preload_values[name] || []).map(&:first)
       columns = simplify_includes_hash(convert_to_includes_hash(includes, [], except))
