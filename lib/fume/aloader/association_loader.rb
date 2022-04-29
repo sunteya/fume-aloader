@@ -6,7 +6,7 @@ module Fume::Aloader
     attr_accessor :profile
 
     attr_accessor :cached_values
-    attr_accessor :predata_values
+    attr_accessor :preload_values
 
     def initialize(records, klass = nil, &block)
       self.profile = :default
@@ -14,12 +14,12 @@ module Fume::Aloader
       self.klass = klass || records.klass
 
       self.cached_values = {}
-      self.predata_values = {}
+      self.preload_values = {}
       self.records = records
       instance_exec(&block) if block
     end
 
-    def fetch(record, name)
+    def find_cached_value(record, name)
       association = record.association(name)
       reflection = association.reflection
 
@@ -32,35 +32,29 @@ module Fume::Aloader
       self.cached_values[name][key]
     end
 
-    def preload(record, *names)
-      [ names ].flatten.each do |name|
-        association = record.association(name)
-        if association.loaded? && !self.cached_values.key?(name)
-          init_records_value(name, ->(scope) {
-            values = self.records.flat_map(&name.to_sym).compact
-            scope.send(:load_records, values)
-            scope.al_init_records
-          })
-        else
-          value = fetch(record, name)
-          association.target = value
-        end
+    def load(record, name)
+      association = record.association(name)
+      if association.loaded? && !self.cached_values.key?(name)
+        init_records_value(name, ->(scope) {
+          values = self.records.flat_map(&name.to_sym).compact
+          scope.send(:load_records, values)
+          scope.al_init_records
+        })
+      else
+        value = find_cached_value(record, name)
+        association.target = value
       end
     end
 
-    def preload_all(*args)
-      records.each { |record| preload(record, *args) }
-    end
-
-    def predata_all(*path, values)
+    def preload_all(*path, values)
       path = [ path ].flatten
       name = path.shift
 
       if path.size.zero?
         fill_records_value(name, values)
       else
-        self.predata_values[name] ||= []
-        self.predata_values[name] << [ path, values ]
+        self.preload_values[name] ||= []
+        self.preload_values[name] << [ path, values ]
       end
     end
 
@@ -69,9 +63,9 @@ module Fume::Aloader
       values = build_association_values_scope(name, association)
       callback&.(values)
 
-      if self.predata_values.key?(name)
-        predata_values[name].each do |args|
-          values.al_data(*args)
+      if self.preload_values.key?(name)
+        preload_values[name].each do |args|
+          values.al_preload_all(*args)
         end
       end
 
@@ -113,7 +107,7 @@ module Fume::Aloader
     end
 
     def apply_profile_attribute_includes(base, name)
-      preset = self.presets[profile] || {}
+      preset = self.active_preset
       attribute = preset.dig(:attributes, name) || {}
 
       if (attr_preset_name = attribute[:preset])
@@ -124,7 +118,7 @@ module Fume::Aloader
       return base if includes.empty?
 
 
-      except = (self.predata_values[name] || []).map(&:first)
+      except = (self.preload_values[name] || []).map(&:first)
       columns = simplify_includes_hash(convert_to_includes_hash(includes, [], except))
 
       if columns.any?
@@ -135,9 +129,9 @@ module Fume::Aloader
     end
 
     def build_profile_scope_includes
-      preset = self.presets[profile] || {}
+      preset = self.active_preset
       except = self.cached_values.keys.map { |it| [ it] }.to_set
-      self.predata_values.each do |name, items|
+      self.preload_values.each do |name, items|
         items.each do |item|
           except << ([ name ] + item.first)
         end
@@ -227,6 +221,15 @@ module Fume::Aloader
 
     def active(name)
       self.profile = name
+    end
+
+    def active_preset
+      self.presets[self.profile] || {}
+    end
+
+    def spawn_from(parent)
+      self.preload_values = parent.preload_values.dup
+      self.profile = parent.profile
     end
   end
 end

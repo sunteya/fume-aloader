@@ -9,6 +9,10 @@ module Fume::Aloader
       attr_accessor :aloader
     end
 
+    def al_load(*args)
+      self.aloader.load(self, *args)
+    end
+
     module ClassMethods
       def aloader_init(&block)
         define_singleton_method :al_build do |records|

@@ -12,12 +12,15 @@ module Fume::Aloader
 
     def spawn(*args)
       result = super
-      result.al_reinit_loader(self.aloader)
+      result.aloader = nil
+      result.al_init_loader
+      result.aloader&.spawn_from(self.aloader) if self.aloader
       result
     end
 
     def al_init_records
       al_init_loader
+
       if self.aloader
         @records.each do |record|
           record.aloader = self.aloader
@@ -25,20 +28,11 @@ module Fume::Aloader
       end
     end
 
-    def al_reinit_loader(*args)
-      self.aloader = nil
-      al_init_loader(*args)
-    end
-
-    def al_init_loader(parent = nil)
+    def al_init_loader
       return if self.aloader
       return unless klass.respond_to?(:al_build)
 
       self.aloader = klass.al_build(self)
-      if parent
-        self.aloader.profile = parent.profile
-        self.aloader.predata_values = parent.predata_values.dup
-      end
     end
 
     def al_load(*args)
@@ -46,9 +40,9 @@ module Fume::Aloader
       self
     end
 
-    def al_data(*args)
+    def al_preload_all(*args)
       al_init_loader
-      self.aloader.predata_all(*args)
+      self.aloader.preload_all(*args)
       self
     end
 

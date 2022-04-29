@@ -57,7 +57,7 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
       it { expect(@result.to_sql).to be_include('JOIN "countries"') }
 
       context "when association is preload" do
-        before { loader.predata_all(:passengers, :homeplace, :country, Country.all.index_by(&:id)) }
+        before { loader.preload_all(:passengers, :homeplace, :country, Country.all.index_by(&:id)) }
         it { expect(@result.to_sql).to_not be_include('JOIN "countries"') }
       end
     end
@@ -108,7 +108,7 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     end
 
     context "when association is preload" do
-      before { loader.predata_all([ :homeplace, :country ], Country.all) }
+      before { loader.preload_all([ :homeplace, :country ], Country.all) }
       before { loader.active :info }
       it { expect(@result).to eq [ :gender, :homeplace ] }
     end
@@ -126,13 +126,5 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
       before { loader.presets[:info][:attributes][:homeplace] = { preset: :head } }
       it { expect(@result).to eq [ :gender, homeplace: [ :province ] ] }
     end
-  end
-
-  describe "#preload_all" do
-    let(:records) { Bus.all }
-    let(:loader) { Fume::Aloader::AssociationLoader.new(records, Bus) }
-
-    action { @result = loader.preload_all(:passengers) }
-    it { expect(loader.cached_values[:passengers].count).not_to eq 0 }
   end
 end
