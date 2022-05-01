@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe "AssociationLoaderRelation" do
-  let!(:bus) { Bus.create! manufacturer_name: 'Toyota' }
+  let!(:bus) { create :bus }
   let!(:passenger_1) { Passenger.create! bus: bus }
 
   describe "#al_load" do

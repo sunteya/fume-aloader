@@ -1,5 +1,5 @@
 FactoryBot.define do
-  factory :bus do
+  factory :truck do
     manufacturer
   end
 end

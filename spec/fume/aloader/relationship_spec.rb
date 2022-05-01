@@ -4,6 +4,12 @@ RSpec.describe Fume::Aloader::Relationship do
   describe '.build' do
 
     context 'when belongs_to' do
+      let!(:license) { create :license }
+      subject { Fume::Aloader::Relationship.build(License, :vehicle) }
+      it { expect(subject).to be_a Fume::Aloader::Relationship::BelongsToPolymorphic }
+    end
+
+    context 'when belongs_to' do
       let!(:passenger) { create :passenger }
       subject { Fume::Aloader::Relationship.build(Passenger, :gender) }
       it { expect(subject).to be_a Fume::Aloader::Relationship::BelongsTo }

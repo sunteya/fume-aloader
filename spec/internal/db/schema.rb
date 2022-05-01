@@ -2,7 +2,7 @@
 
 ActiveRecord::Schema.define do
   create_table :buses do |t|
-    t.string :manufacturer_name
+    t.integer :manufacturer_id
   end
 
   create_table :genders do |t|
@@ -31,13 +31,17 @@ ActiveRecord::Schema.define do
   end
 
   create_table :trucks do |t|
-    t.string :manufacturer_name
+    t.integer :manufacturer_id
   end
 
   create_table :licenses do |t|
     t.string :number
     t.integer :vehicle_id
     t.string :vehicle_type
+  end
+
+  create_table :manufacturers do |t|
+    t.string :name
   end
 
 

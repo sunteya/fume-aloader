@@ -23,8 +23,8 @@ module Fume::Aloader
 
     def find_cached_value(record, name)
       relationship = Relationship.build(klass, name)
-      key = relationship.get_cache_key(record)
-      self.cached_values[name][key]
+      cache_key = relationship.get_cache_key(record)
+      self.cached_values[name][cache_key]
     end
 
     def load(record, name)
@@ -53,27 +53,35 @@ module Fume::Aloader
     end
 
     def init_records_value(name)
-      values = build_association_values_scope(name)
-
-      if self.preload_values.key?(name)
-        preload_values[name].each do |args|
-          values.al_preload_all(*args)
+      values_list = build_association_values_scopes(name)
+      values_list.each do |values|
+        if self.preload_values.key?(name)
+          preload_values[name].each do |args|
+            values.al_preload_all(*args)
+          end
         end
-      end
 
-      cache_association_values(name, values)
+        cache_association_values(name, values)
+      end
     end
 
     def cache_association_values(name, values)
       relationship = Relationship.build(klass, name)
-      self.cached_values[name] = relationship.build_cached_value(values)
+
+      if self.cached_values.key?(name)
+        self.cached_values[name].update(relationship.build_cached_value(values))
+      else
+        self.cached_values[name] = relationship.build_cached_value(values)
+      end
     end
 
-    def build_association_values_scope(name)
+    def build_association_values_scopes(name)
       relationship = Relationship.build(klass, name)
-      values_scope = relationship.build_values_scope(records)
-      values_scope = apply_profile_attribute_includes(values_scope, name)
-      values_scope
+      values_scopes = relationship.build_values_scopes(records)
+
+      values_scopes.map do |values_scope|
+        apply_profile_attribute_includes(values_scope, name)
+      end
     end
 
     def apply_profile_attribute_includes(base, name)
@@ -84,7 +92,7 @@ module Fume::Aloader
         return base.al_to_scope(attr_preset_name)
       end
 
-      includes = find_attribute_includes(preset, name) || []
+      includes = find_attribute_includes(preset, name, base.klass) || []
       return base if includes.empty?
 
       except = (self.preload_values[name] || []).map(&:first)
@@ -114,7 +122,7 @@ module Fume::Aloader
             result.update convert_to_includes_hash({ name => value }, [], except)
           end
         else
-          includes = find_attribute_includes(preset, root) || {}
+          includes = find_attribute_includes(preset, root, nil) || {}
           result.update convert_to_includes_hash({ root => includes }, [], except)
         end
       end
@@ -170,22 +178,16 @@ module Fume::Aloader
       end
     end
 
-    def find_attribute_includes(preset, name)
+    def find_attribute_includes(preset, name, association_klass)
       attribute = preset.dig(:attributes, name) || {}
 
       attr_preset_name = attribute[:preset]
       return attribute[:scope_includes] || [] if attr_preset_name.nil?
 
-      loader = build_attribute_aloader(name, attr_preset_name)
+      association_klass ||= klass.new.association(name).reflection.klass
+      loader = association_klass.al_build([])
+      loader.active(attr_preset_name)
       loader.build_profile_scope_includes
-    end
-
-    def build_attribute_aloader(name, profile)
-      association = klass.new.association(name)
-      reflection = association.reflection
-      loader = reflection.klass.al_build([])
-      loader.active(profile)
-      loader
     end
 
     def active(name)

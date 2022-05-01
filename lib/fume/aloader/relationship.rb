@@ -1,5 +1,6 @@
 require_relative "relationship/has_many"
 require_relative "relationship/belongs_to"
+require_relative "relationship/belongs_to_polymorphic"
 # require_relative "relationship/has_and_belongs_to_many"
 require_relative "relationship/has_one"
 
@@ -16,11 +17,13 @@ module Fume::Aloader
         reflection_class = HasMany
       elsif reflection.has_one?
         reflection_class = HasOne
+      elsif reflection.polymorphic?
+        reflection_class = BelongsToPolymorphic
       else
         reflection_class = BelongsTo
       end
 
-      reflection_class.new(association, reflection)
+      reflection_class.new(klass, association, reflection)
     end
   end
 end

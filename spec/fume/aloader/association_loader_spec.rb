@@ -2,28 +2,28 @@ require 'rails_helper'
 
 RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
 
-  let!(:bus) { Bus.create! manufacturer_name: 'Toyota' }
+  let!(:bus) { create :bus }
   let!(:bus_license) { License.create! number: '123456789', vehicle: bus }
   let!(:passenger_1) { Passenger.create! bus: bus, gender: Gender.male }
 
-  let!(:truck) { Truck.create! manufacturer_name: 'Ford' }
+  let!(:truck) { create :truck }
   let!(:truck_license) { License.create! number: '987654321', vehicle: truck }
 
-  describe '#build_association_values_scope' do
+  describe '#build_association_values_scopes' do
     context 'when records is an instance of ActiveRecord::Relation' do
       let(:records) { Bus.all }
       let(:loader) { Fume::Aloader::AssociationLoader.new(records) }
-      action { @result = loader.build_association_values_scope(:passengers) }
+      action { @result = loader.build_association_values_scopes(:passengers) }
 
-      it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
+      it { expect(@result[0].is_a?(ActiveRecord::Relation)).to be_truthy }
     end
 
     context 'when record is an instance of array' do
       let(:records) { Bus.limit(2).to_a }
       let(:loader) { Fume::Aloader::AssociationLoader.new(records, Bus) }
-      action { @result = loader.build_association_values_scope(:passengers) }
+      action { @result = loader.build_association_values_scopes(:passengers) }
 
-      it { expect(@result.is_a?(ActiveRecord::Relation)).to be_truthy }
+      it { expect(@result[0].is_a?(ActiveRecord::Relation)).to be_truthy }
     end
   end
 
@@ -64,6 +64,41 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
       before { loader.active(:head) }
       it { expect(@result.to_sql).to be_include('JOIN "countries"')
            expect(@result.aloader.profile).to eq :head }
+    end
+
+    context 'when attribute is polymorphic' do
+      let(:loader) { Fume::Aloader.dsl(License.all) do
+        preset :main do
+          attribute :vehicle, preset: :main
+        end
+      end }
+
+      before { allow(Bus).to receive(:al_build).and_wrap_original { |m, *args|
+        Fume::Aloader.dsl(*args, Bus) do
+          preset :main do
+            scope_includes :manufacturer
+          end
+        end
+      } }
+
+      before { allow(Truck).to receive(:al_build).and_wrap_original { |m, *args|
+        Fume::Aloader.dsl(*args, Truck) do
+          preset :main do
+          end
+        end
+      } }
+
+      before { loader.active(:main) }
+
+      context "when is bus" do
+        action { @result = loader.apply_profile_attribute_includes(Bus.where("id = -1"), :vehicle) }
+        it { expect(@result.to_sql).to be_include 'JOIN "manufacturers"' }
+      end
+
+      context "when is truck" do
+        action { @result = loader.apply_profile_attribute_includes(Truck.where("id = -1"), :vehicle) }
+        it { expect(@result.to_sql).to_not be_include 'JOIN "manufacturers"' }
+      end
     end
   end
 
