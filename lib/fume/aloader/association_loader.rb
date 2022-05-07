@@ -33,10 +33,21 @@ module Fume::Aloader
         # prefer use cached value
         association.target = find_cached_value(record, name)
       elsif association.loaded?
-        # ignore
+        ensure_attribute_aloader_inited(record, name)
       else
         init_records_value(name)
         association.target = find_cached_value(record, name)
+      end
+    end
+
+    def ensure_attribute_aloader_inited(record, name)
+      relationship = Relationship.build(klass, name)
+      return if relationship.loader_is_inited?(record)
+
+      options = active_preset[:attributes][name] || {}
+      loaders = relationship.loaders_init(self.records, options[:preset])
+      (self.preload_values[name] || []).each do |args|
+        loaders.each { |it| it.preload_all(*args) }
       end
     end
 

@@ -1,8 +1,8 @@
-require_relative "base"
+require_relative "base_single"
 
 module Fume::Aloader
   module Relationship
-    class BelongsToPolymorphic < Base
+    class BelongsToPolymorphic < BaseSingle
       def get_cache_key(record)
         [ record.send(reflection.join_foreign_type), record.send(reflection.join_foreign_key) ]
       end
@@ -15,12 +15,13 @@ module Fume::Aloader
         values_mapping = records.each_with_object({}).each do |record, hash|
           type = record.read_attribute(reflection.join_foreign_type)
           next if type.nil?
-          hash[type] ||= Set.new
 
           value = record.read_attribute(reflection.join_foreign_key)
-          hash[type] << value if !value.nil?
-        end
-
+          if value
+            hash[type] ||= Set.new
+            hash[type] << value
+          end
+        end.compact
 
         values_mapping.map do |type, values|
           values = [ values.to_a ]
@@ -37,6 +38,35 @@ module Fume::Aloader
           values_scope = association.send(:target_scope).merge(association_scope.scope(association))
           values_scope = values_scope.limit(nil).offset(0)
           values_scope
+        end
+      end
+
+      def build_values_mapping(records)
+      end
+
+      def loaders_init(parents, preset)
+        values_mapping = parents.each_with_object({}).each do |parent, hash|
+          type = parent.read_attribute(reflection.join_foreign_type)
+          next if type.nil?
+
+          value = parent.send(reflection.name)
+          if value
+            hash[type] ||= Set.new
+            hash[type] << value
+          end
+        end.compact
+
+        values_mapping.each do |type, values|
+          loader_klass = type.constantize
+          next if !loader_klass.respond_to?(:al_build)
+          loader = loader_klass.al_build(values)
+
+          values.each do |value|
+            value.aloader = loader
+          end
+
+          loader.active(preset) if preset
+          loader
         end
       end
     end

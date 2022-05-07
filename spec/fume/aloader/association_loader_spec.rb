@@ -4,7 +4,7 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
 
   let!(:bus) { create :bus }
   let!(:bus_license) { License.create! number: '123456789', vehicle: bus }
-  let!(:passenger_1) { Passenger.create! bus: bus, gender: Gender.male }
+  let!(:passenger_1) { create :passenger, bus: bus, gender: Gender.male }
 
   let!(:truck) { create :truck }
   let!(:truck_license) { License.create! number: '987654321', vehicle: truck }
@@ -159,5 +159,37 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
       before { loader.presets[:info][:attributes][:homeplace] = { preset: :head } }
       it { expect(@result).to eq [ :gender, homeplace: [ :province ] ] }
     end
+  end
+
+  describe "#load" do
+    let(:records) { Passenger.all.al_to_scope(:main) }
+    let(:record) { records.first }
+
+    before { allow(Passenger).to receive(:al_build).and_wrap_original { |m, *args|
+      Fume::Aloader.dsl(*args, Passenger) do
+        preset :main do
+          scope_includes :homeplace
+          attribute :homeplace, preset: :main
+        end
+      end
+    } }
+
+    before { allow(City).to receive(:al_build).and_wrap_original { |m, *args|
+      Fume::Aloader.dsl(*args, City) do
+        preset :main do
+          attribute :country
+        end
+      end
+    } }
+
+    action {
+      record.al_load(:homeplace)
+      @homeplace = record.homeplace
+      @homeplace.al_load(:country)
+      @country = @homeplace.country
+    }
+
+    it { expect(@homeplace.aloader.profile).to eq :main
+         expect(@country).to_not be_nil }
   end
 end

@@ -1,8 +1,8 @@
-require_relative "base"
+require_relative "base_single"
 
 module Fume::Aloader
   module Relationship
-    class BelongsTo < Base
+    class BelongsTo < BaseSingle
       def get_cache_key(record)
         record.send(reflection.join_foreign_key)
       end
