@@ -1,6 +1,5 @@
 module Fume::Aloader
   module RelationAddons
-
     attr_accessor :aloader
 
     def load(*args, &block)
@@ -11,7 +10,7 @@ module Fume::Aloader
     end
 
     def spawn(*args)
-      result = super
+      result = already_in_scope? ? klass.all : clone
       result.aloader = nil
       result.al_init_loader
       result.aloader&.spawn_from(self.aloader) if self.aloader
@@ -47,9 +46,15 @@ module Fume::Aloader
     end
 
     def al_to_scope(preset = :default)
+      if self.is_a?(ActiveRecord::Associations::CollectionProxy)
+        scope.al_to_scope(preset)
+        return
+      end
+
       al_init_loader
       self.aloader.active(preset)
-      self.aloader.apply_profile_scope_includes(self)
+      result = self.aloader.apply_profile_scope_includes(self)
+      result
     end
   end
 end
