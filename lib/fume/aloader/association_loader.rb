@@ -44,7 +44,7 @@ module Fume::Aloader
       relationship = Relationship.build(klass, name)
       return if relationship.loader_is_inited?(record)
 
-      options = active_preset[:attributes][name] || {}
+      options = active_preset.dig(:attributes, name) || {}
       loaders = relationship.loaders_init(self.records, options[:preset])
       (self.preload_values[name] || []).each do |args|
         loaders.each { |it| it.preload_all(*args) }
