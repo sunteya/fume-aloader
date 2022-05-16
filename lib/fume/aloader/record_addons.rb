@@ -20,6 +20,12 @@ module Fume::Aloader
       end
     end
 
+    def al_build(preset = :default)
+      return self.aloader if self.aloader
+      self.aloader = self.class.al_build([ self ])
+      self.aloader.active(preset)
+    end
+
     module ClassMethods
       def aloader_init(&block)
         define_singleton_method :al_build do |records|

@@ -46,11 +46,6 @@ module Fume::Aloader
     end
 
     def al_to_scope(preset = :default)
-      if self.is_a?(ActiveRecord::Associations::CollectionProxy)
-        scope.al_to_scope(preset)
-        return
-      end
-
       al_init_loader
       self.aloader.active(preset)
       result = self.aloader.apply_profile_scope_includes(self)
