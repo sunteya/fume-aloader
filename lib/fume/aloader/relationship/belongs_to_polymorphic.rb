@@ -59,13 +59,8 @@ module Fume::Aloader
         values_mapping.each do |type, values|
           loader_klass = type.constantize
           next if !loader_klass.respond_to?(:al_build)
-          loader = loader_klass.al_build(values)
+          loader = loader_klass.al_build(values, preset: preset, inject: true)
 
-          values.each do |value|
-            value.aloader = loader
-          end
-
-          loader.active(preset) if preset
           loader
         end
       end

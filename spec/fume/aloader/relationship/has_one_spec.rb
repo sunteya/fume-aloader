@@ -2,7 +2,8 @@ require 'rails_helper'
 
 RSpec.describe Fume::Aloader::Relationship::BelongsTo do
   before { allow(Clazz).to receive(:al_build).and_wrap_original { |m, *args|
-    Fume::Aloader.dsl(*args, Clazz) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Clazz)) do
       preset :main do
         attribute :blackboard, preset: :head
       end
@@ -10,7 +11,8 @@ RSpec.describe Fume::Aloader::Relationship::BelongsTo do
   } }
 
   before { allow(Blackboard).to receive(:al_build).and_wrap_original { |m, *args|
-    Fume::Aloader.dsl(*args, Blackboard) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Blackboard)) do
     end
   } }
 

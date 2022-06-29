@@ -10,15 +10,22 @@ module Fume::Aloader
     attr_accessor :cached_values
     attr_accessor :preload_values
 
-    def initialize(records, klass = nil, &block)
-      self.profile = :default
+    def initialize(records, options = {}, &block)
+      self.profile = options[:preset] || :default
       self.presets = {}
-      self.klass = klass || records.klass
+      self.klass = options[:klass] || records.klass
 
       self.cached_values = {}
       self.preload_values = {}
       self.records = records
+
       instance_exec(&block) if block
+
+      if options[:inject]
+        self.records.each do |record|
+          record.aloader = self
+        end
+      end
     end
 
     def find_cached_value(record, name)
@@ -196,8 +203,7 @@ module Fume::Aloader
       return attribute[:scope_includes] || [] if attr_preset_name.nil?
 
       association_klass ||= klass.new.association(name).reflection.klass
-      loader = association_klass.al_build([])
-      loader.active(attr_preset_name)
+      loader = association_klass.al_build([], preset: attr_preset_name)
       loader.build_profile_scope_includes
     end
 

@@ -2,12 +2,14 @@ require 'rails_helper'
 
 RSpec.describe Fume::Aloader::Relationship::HasMany do
   before { allow(Bus).to receive(:al_build).and_wrap_original { |m, *args|
-    Fume::Aloader.dsl(*args, Bus) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Bus)) do
     end
   } }
 
   before { allow(Passenger).to receive(:al_build).and_wrap_original { |m, *args|
-    Fume::Aloader.dsl(*args, Passenger) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Passenger)) do
     end
   } }
 
@@ -35,8 +37,7 @@ RSpec.describe Fume::Aloader::Relationship::HasMany do
     end
 
     context "when value is loader" do
-      let(:aloader) { Passenger.al_build([ passenger_1, passenger_2 ]) }
-      before { bus.passengers.each { |it| it.aloader = aloader } }
+      let(:aloader) { Passenger.al_build([ passenger_1, passenger_2 ], inject: true) }
       it { expect(@result).to eq true }
     end
   end

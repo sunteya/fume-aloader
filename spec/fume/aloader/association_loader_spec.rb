@@ -20,7 +20,7 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
 
     context 'when record is an instance of array' do
       let(:records) { Bus.limit(2).to_a }
-      let(:loader) { Fume::Aloader::AssociationLoader.new(records, Bus) }
+      let(:loader) { Fume::Aloader::AssociationLoader.new(records, klass: Bus) }
       action { @result = loader.build_association_values_scopes(:passengers) }
 
       it { expect(@result[0].is_a?(ActiveRecord::Relation)).to be_truthy }
@@ -29,7 +29,8 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
 
   describe "#apply_profile_attribute_includes" do
     before { allow(Passenger).to receive(:al_build).and_wrap_original { |m, *args|
-      Fume::Aloader.dsl(*args, Passenger) do
+      options = args.extract_options!
+      Fume::Aloader.dsl(*args, options.merge(klass: Passenger)) do
         preset :head do
           scope_includes homeplace: [ :country ]
         end
@@ -74,7 +75,8 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
       end }
 
       before { allow(Bus).to receive(:al_build).and_wrap_original { |m, *args|
-        Fume::Aloader.dsl(*args, Bus) do
+        options = args.extract_options!
+        Fume::Aloader.dsl(*args, options.merge(klass: Bus)) do
           preset :main do
             scope_includes :manufacturer
           end
@@ -82,7 +84,8 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
       } }
 
       before { allow(Truck).to receive(:al_build).and_wrap_original { |m, *args|
-        Fume::Aloader.dsl(*args, Truck) do
+        options = args.extract_options!
+        Fume::Aloader.dsl(*args, options.merge(klass: Truck)) do
           preset :main do
           end
         end
@@ -104,7 +107,7 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
 
   describe "#build_profile_scope_includes" do
     let(:loader) {
-      Fume::Aloader::AssociationLoader.new([], Passenger) do
+      Fume::Aloader::AssociationLoader.new([], klass: Passenger) do
         self.presets = {
           head: { scope_includes: [ :gender ] },
           info: {
@@ -149,7 +152,8 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     context "when association is preset" do
       before { loader.active :info }
       before { allow(City).to receive(:al_build).and_wrap_original { |m, *args|
-        Fume::Aloader.dsl(*args, City) do
+        options = args.extract_options!
+        Fume::Aloader.dsl(*args, options.merge(klass: City)) do
           preset :head do
             scope_includes [ :province ]
           end
@@ -166,7 +170,8 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     let(:record) { records.first }
 
     before { allow(Passenger).to receive(:al_build).and_wrap_original { |m, *args|
-      Fume::Aloader.dsl(*args, Passenger) do
+      options = args.extract_options!
+      Fume::Aloader.dsl(*args, options.merge(klass: Passenger)) do
         preset :main do
           scope_includes :homeplace
           attribute :homeplace, preset: :main
@@ -175,7 +180,8 @@ RSpec.describe "Fume::Aloader::AssociationLoader", type: :model do
     } }
 
     before { allow(City).to receive(:al_build).and_wrap_original { |m, *args|
-      Fume::Aloader.dsl(*args, City) do
+      options = args.extract_options!
+      Fume::Aloader.dsl(*args, options.merge(klass: City)) do
         preset :main do
           attribute :country
         end

@@ -22,15 +22,16 @@ module Fume::Aloader
 
     def al_build(preset = :default)
       return self.aloader if self.aloader
-      self.aloader = self.class.al_build([ self ])
-      self.aloader.active(preset)
+      self.aloader = self.class.al_build([ self ], preset: preset)
     end
 
     module ClassMethods
       def aloader_init(&block)
-        define_singleton_method :al_build do |records|
+        define_singleton_method :al_build do |records, options = {}|
           dsl = DSL.new(&block)
-          dsl.apply_config(AssociationLoader.new(records, self))
+          loader = dsl.apply_config(AssociationLoader.new(records, { klass: self }.merge(options)))
+
+          loader
         end
       end
     end

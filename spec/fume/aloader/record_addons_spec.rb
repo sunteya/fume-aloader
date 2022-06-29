@@ -2,7 +2,8 @@ require 'rails_helper'
 
 RSpec.describe "RecordAddons" do
   before { allow(Bus).to receive(:al_build).and_wrap_original do |m, *args|
-    Fume::Aloader.dsl(*args, Bus) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Bus)) do
       preset :head do
         attribute :passengers, preset: :head
       end
@@ -10,7 +11,8 @@ RSpec.describe "RecordAddons" do
   end }
 
   before { allow(Passenger).to receive(:al_build).and_wrap_original do |m, *args|
-    Fume::Aloader.dsl(*args, Passenger) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Passenger)) do
       preset :head do
         attribute :homeplace do
           scope_includes :country

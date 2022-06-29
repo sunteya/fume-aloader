@@ -7,12 +7,14 @@ RSpec.describe Fume::Aloader::Relationship::BelongsToPolymorphic do
   let!(:license_2) { create :license, vehicle: truck }
 
   before { allow(Truck).to receive(:al_build).and_wrap_original { |m, *args|
-    Fume::Aloader.dsl(*args, Truck) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Truck)) do
     end
   } }
 
   before { allow(Bus).to receive(:al_build).and_wrap_original { |m, *args|
-    Fume::Aloader.dsl(*args, Bus) do
+    options = args.extract_options!
+    Fume::Aloader.dsl(*args, options.merge(klass: Bus)) do
     end
   } }
 

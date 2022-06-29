@@ -22,13 +22,8 @@ module Fume::Aloader
       def loaders_init(parents, preset)
         values = parents.flat_map { |it| it.send(reflection.name) }.compact
         return [] if !reflection.klass.respond_to?(:al_build)
-        loader = reflection.klass.al_build(values)
+        loader = reflection.klass.al_build(values, preset: preset, inject: true)
 
-        values.each do |value|
-          value.aloader = loader
-        end
-
-        loader.active(preset) if preset
         [ loader ]
       end
     end
