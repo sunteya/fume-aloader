@@ -10,7 +10,7 @@ module Fume::Aloader
     end
 
     def spawn(*args)
-      result = already_in_scope? ? klass.all : clone
+      result = super
       result.aloader = nil
       result.al_init_loader
       result.aloader&.spawn_from(self.aloader) if self.aloader
