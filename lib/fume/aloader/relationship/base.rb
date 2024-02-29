@@ -12,8 +12,8 @@ module Fume::Aloader
       end
 
       def build_values_scopes(records)
-        # HACK: 重写第一次取值，升级后可能会报错
-        # 不能使用子查询 select, 可能内存占用过多
+        # HACK: Rewrite the first retrieval, errors may occur after upgrading.
+        # Cannot use subquery select, may occupy too much memory.
         hack_values = [ records.map { |item| item.read_attribute(reflection.join_foreign_key) }.uniq ]
 
         value_transformation = ->(val) {

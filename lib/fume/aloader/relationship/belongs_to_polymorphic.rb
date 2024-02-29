@@ -26,8 +26,8 @@ module Fume::Aloader
         values_mapping.map do |type, values|
           values = [ values.to_a ]
 
-          # HACK: 重写第一次取值，升级后可能会报错
-          # 不能使用子查询 select, 可能内存占用过多
+          # HACK: Rewrite the first retrieval to prevent potential errors after upgrading.
+          # Avoid using subqueries in the select statement, as it may consume too much memory.
           value_transformation = ->(val) {
             values.shift || val
           }
