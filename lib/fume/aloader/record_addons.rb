@@ -14,10 +14,13 @@ module Fume::Aloader
       name = path.shift
       self.aloader.load(self, name)
 
+      value = self.send(name)
+
       if path.any?
-        value = self.send(name)
         value&.al_load(*path)
       end
+
+      value
     end
 
     def al_build(preset = :default)
